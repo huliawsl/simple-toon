@@ -67,13 +67,13 @@ void shade(V2F inputs)
     float permanentShadow = textureSparse(shadow_channel, inputs.sparse_coord).r; // 假设灰度值存储在红色通道
 
     // 应用永久阴影
-    color = mix(color, u_color_shadow, permanentShadow);
+    color = mix(color, u_color_shadow * color, permanentShadow);
 
     // 光照阴影处理
     float shadowTransition = u_slider_ShadowFactor; // 渐变范围，可以根据需要调整这个值来控制渐变的软硬程度
     if(u_bool_shaodw){
         float shadowFactor = smoothstep(u_slider_shadow - shadowTransition, u_slider_shadow + shadowTransition, NdL);
-        color = mix(color, u_color_shadow, 1 - shadowFactor); // 在光照和阴影之间进行混合
+        color = mix(color, u_color_shadow * color, 1 - shadowFactor); // 在光照和阴影之间进行混合
     }
 
     // 边缘检测和描边
