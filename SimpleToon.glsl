@@ -29,9 +29,8 @@ uniform vec3 camera_pos;
 //: param auto channel_basecolor
 uniform SamplerSparse basecolor_tex;
 
-// 绑定阴影倾向性通道
 //: param auto channel_user0
-uniform SamplerSparse shadow_tendency_channel;
+uniform SamplerSparse shadow_channel;
 
 //: param custom { "default": 0.4, "label": "Shadow Color", "widget": "color" } 
 uniform vec3 u_color_shadow; 
@@ -43,7 +42,7 @@ uniform float u_slider_shadow;
 uniform vec3 u_color_outline; 
 
 //: param custom { "default": 0.18, "label": "Outline Thickness", "min": 0.0, "max": 1.0 } 
-uniform float u_slider_outlinethick; 
+uniform float u_slider_outlinethickness; 
 
 //: param custom { "default": true, "label": "Lighting Shadow" } 
 uniform bool u_bool_shadow;
@@ -60,28 +59,31 @@ void shade(V2F inputs)
     // 观察方向
     vec3 V = normalize(camera_pos - inputs.position);
 
-    // 根据光照方向来离散地对基础颜色进行调整：
+    // 根据光照方向来离散地对基础颜色进行减弱：
     float NdL = max(0.0, dot(N, L));
     vec3 color = getBaseColor(basecolor_tex, inputs.sparse_coord);
 
-    // 采样影阴影信息, 使用channel0作为阴影的控制值
-    float shadowTendency = textureSparse(shadow_tendency_channel, inputs.sparse_coord).r; // 使用红色通道
-    shadowTendency = clamp(shadowTendency, 0.0, 1.0);
+    // 采样永久阴影信息
+    float permanentShadow = 1 - textureSparse(shadow_channel, inputs.sparse_coord).r; // 假设灰度值存储在红色通道
 
-    // 应用基于shadowTendency计算得到的阴影
-    float mappedShadowTendency = shadowTendency * 2.0 - 1.0; // 将0.5作为中点
-    color = mix(color, u_color_shadow, mappedShadowTendency); 
+    vec3 color_shadow = color * u_color_shadow;
+
+    // 应用永久阴影
+    color = mix(color, color_shadow, permanentShadow); // 使用采样的阴影因子来混合颜色
 
     // 光照阴影处理
-    float shadowTransition = u_slider_ShadowFactor; 
-    if (u_bool_shadow) {
+    float shadowTransition = u_slider_ShadowFactor; // 渐变范围，可以根据需要调整这个值来控制渐变的软硬程度
+    if(u_bool_shadow){
         float shadowFactor = smoothstep(u_slider_shadow - shadowTransition, u_slider_shadow + shadowTransition, NdL);
-        color = mix(color, u_color_shadow, 1.0 - shadowFactor);
+        color = mix(color, color_shadow, 1 - shadowFactor); // 在光照和阴影之间进行混合
     }
 
     // 边缘检测和描边
-    float edge = abs(dot(N, V));
-    if (edge < u_slider_outlinethick) {
+    float edge = 0.0;
+    // 检测与相机的边缘
+    edge += abs(dot(N, V));
+    // 描边处理
+    if (edge < u_slider_outlinethickness) {
         color = u_color_outline; // 使用描边颜色
     }
 
