@@ -32,8 +32,8 @@ uniform SamplerSparse basecolor_tex;
 //: param auto channel_user0
 uniform SamplerSparse shadow_channel;
 
-//: param custom { "default": 0.4, "label": "Shadow Color", "widget": "color" } 
-uniform vec3 u_color_shadow; 
+//: param auto channel_user1
+uniform SamplerSparse shadowcol_channel;
 
 //: param custom { "default": 0.5, "label": "Shadow Range", "min": 0.0, "max": 1.0 } 
 uniform float u_slider_shadow; 
@@ -61,12 +61,14 @@ void shade(V2F inputs)
 
     // 根据光照方向来离散地对基础颜色进行减弱：
     float NdL = max(0.0, dot(N, L));
+
     vec3 color = getBaseColor(basecolor_tex, inputs.sparse_coord);
+    vec3 color_shadow_tex = getBaseColor(shadowcol_channel, inputs.sparse_coord);
 
     // 采样永久阴影信息
     float permanentShadow = 1 - textureSparse(shadow_channel, inputs.sparse_coord).r; // 假设灰度值存储在红色通道
 
-    vec3 color_shadow = color * u_color_shadow;
+    vec3 color_shadow = color * color_shadow_tex;
 
     // 应用永久阴影
     color = mix(color, color_shadow, permanentShadow); // 使用采样的阴影因子来混合颜色
