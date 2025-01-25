@@ -1,6 +1,9 @@
 // 导入必要的库
 import lib-sampler.glsl
 import lib-defines.glsl
+import lib-random.glsl
+
+//: state blend over
 
 //: param auto environment_rotation 
 uniform float uniform_environment_rotation;
@@ -35,6 +38,9 @@ uniform SamplerSparse shadow_channel;
 //: param auto channel_user1
 uniform SamplerSparse shadowcol_channel;
 
+//: param auto channel_opacity
+uniform SamplerSparse alpha_channel;
+
 //: param custom { "default": 0.5, "label": "Shadow Range", "min": 0.0, "max": 1.0 } 
 uniform float u_slider_shadow; 
 
@@ -50,8 +56,30 @@ uniform bool u_bool_shadow;
 //: param custom { "default": 0.01, "label": "Shadow Factor", "min": 0.0, "max": 0.1 } 
 uniform float u_slider_ShadowFactor; 
 
+//: param custom { "default": 0.18, "label": "Alpha threshold (Only valid in Clip)", "min": 0.0, "max": 1.0 } 
+uniform float u_slider_alphathreshold; 
+
+//: param custom { 
+//:   "default": 0, 
+//:   "label": "Alpha Mode", 
+//:   "widget": "combobox", 
+//:   "values": { 
+//:     "Clip": 0, 
+//:     "Blend": 1 
+//:   } 
+//: } 
+uniform int u_alphaMode;
+
 void shade(V2F inputs)
 {
+    float alpha_tex = getOpacity(alpha_channel, inputs.sparse_coord);
+    if(u_alphaMode == 0){
+        if (alpha_tex < u_slider_alphathreshold) {
+            discard; // 丢弃不透明度不足的像素
+        }
+    }else{
+        alphaOutput(alpha_tex);
+    }
     // 法线：
     vec3 N = normalize(inputs.normal);
     // 光源方向
@@ -65,8 +93,9 @@ void shade(V2F inputs)
     vec3 color = getBaseColor(basecolor_tex, inputs.sparse_coord);
     vec3 color_shadow_tex = getBaseColor(shadowcol_channel, inputs.sparse_coord);
 
+
     // 采样永久阴影信息
-    float permanentShadow = 1 - textureSparse(shadow_channel, inputs.sparse_coord).r; // 假设灰度值存储在红色通道
+    float permanentShadow = 1 - textureSparse(shadow_channel, inputs.sparse_coord).b; 
 
     vec3 color_shadow = color * color_shadow_tex;
 
@@ -91,4 +120,5 @@ void shade(V2F inputs)
 
     // 输出颜色
     diffuseShadingOutput(color);
+    
 }
