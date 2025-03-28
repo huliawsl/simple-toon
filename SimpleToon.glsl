@@ -95,7 +95,7 @@ void shade(V2F inputs)
 
 
     // 采样永久阴影信息
-    float permanentShadow = 1 - textureSparse(shadow_channel, inputs.sparse_coord).b; 
+    float permanentShadow = 1 - textureSparse(shadow_channel, inputs.sparse_coord).r; 
 
     vec3 color_shadow = color * color_shadow_tex;
 
